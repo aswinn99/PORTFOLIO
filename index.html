@@ -33,6 +33,38 @@
   body.loading{ overflow:hidden; height:100vh; }
   ::selection{ background:var(--cyan); color:var(--bg); }
 
+  /* ---------- CURSOR GLOW ---------- */
+  #cursorGlow{
+    position:fixed; z-index:2; pointer-events:none; top:0; left:0;
+    width:420px; height:420px; margin:-210px 0 0 -210px; border-radius:50%;
+    background:radial-gradient(circle, rgba(85,224,201,0.07) 0%, rgba(85,224,201,0) 70%);
+    opacity:0; transition:opacity .4s ease;
+    will-change:transform;
+  }
+  @media (max-width:900px), (hover:none){ #cursorGlow{ display:none; } }
+
+  /* ---------- SCANLINES ---------- */
+  .scanlines{
+    position:absolute; inset:0; z-index:1; pointer-events:none;
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(85,224,201,0.025) 0px,
+      rgba(85,224,201,0.025) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    mix-blend-mode:overlay;
+  }
+  .scan-sweep{
+    position:absolute; left:0; right:0; height:120px; z-index:1; pointer-events:none;
+    background:linear-gradient(to bottom, rgba(85,224,201,0) 0%, rgba(85,224,201,0.05) 50%, rgba(85,224,201,0) 100%);
+    animation:sweepDown 7s linear infinite;
+  }
+  @keyframes sweepDown{
+    0%{ top:-120px; }
+    100%{ top:100%; }
+  }
+
   /* faint grid backdrop, like a monitoring console */
   .grid-bg{
     position:fixed; inset:0; z-index:0; pointer-events:none;
@@ -118,7 +150,56 @@
   .nav-status{ display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11px; color:var(--cyan); }
   .dot{ width:7px; height:7px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan); }
 
-  @media (max-width:720px){ .nav-links{ display:none; } }
+  .nav-burger{
+    display:none; flex-direction:column; gap:5px; background:none; border:none; cursor:pointer;
+    padding:6px; z-index:60;
+  }
+  .nav-burger span{ width:20px; height:1.5px; background:var(--cyan); display:block; transition:transform .25s, opacity .25s; }
+  .nav-burger.open span:nth-child(1){ transform:translateY(6.5px) rotate(45deg); }
+  .nav-burger.open span:nth-child(2){ opacity:0; }
+  .nav-burger.open span:nth-child(3){ transform:translateY(-6.5px) rotate(-45deg); }
+
+  .mobile-menu{
+    position:fixed; top:64px; left:0; right:0; z-index:49;
+    background:rgba(10,18,28,0.97); border-bottom:1px solid var(--panel-line);
+    max-height:0; overflow:hidden; transition:max-height .35s ease;
+  }
+  .mobile-menu.open{ max-height:320px; }
+  .mobile-menu ul{ list-style:none; display:flex; flex-direction:column; padding:8px 28px 20px; }
+  .mobile-menu a{
+    display:block; padding:14px 0; font-family:var(--mono); font-size:13px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--muted); text-decoration:none; border-bottom:1px solid var(--panel-line);
+  }
+  .mobile-menu a:active, .mobile-menu a:hover{ color:var(--cyan); }
+
+  @media (max-width:720px){
+    .nav-links{ display:none; }
+    .nav-burger{ display:flex; }
+  }
+  @media (min-width:721px){ .mobile-menu{ display:none; } }
+
+  /* ---------- THREAT LOG TICKER ---------- */
+  .ticker{
+    position:relative; z-index:1;
+    border-top:1px solid var(--panel-line); border-bottom:1px solid var(--panel-line);
+    background:rgba(16,30,44,0.5);
+    overflow:hidden; white-space:nowrap;
+    padding:11px 0;
+  }
+  .ticker-track{
+    display:inline-flex; gap:48px; animation:tickerScroll 32s linear infinite;
+    font-family:var(--mono); font-size:12px; letter-spacing:.03em;
+  }
+  .ticker:hover .ticker-track{ animation-play-state:paused; }
+  .ticker-item{ display:inline-flex; align-items:center; gap:8px; color:var(--muted); }
+  .ticker-item .lvl{ font-weight:600; padding:1px 6px; border-radius:3px; font-size:10.5px; letter-spacing:.06em; }
+  .lvl-info{ color:var(--cyan); border:1px solid rgba(85,224,201,0.35); }
+  .lvl-warn{ color:var(--amber); border:1px solid rgba(242,166,92,0.35); }
+  .lvl-ok{ color:#7FD98A; border:1px solid rgba(127,217,138,0.35); }
+  @keyframes tickerScroll{
+    0%{ transform:translateX(0); }
+    100%{ transform:translateX(-50%); }
+  }
 
   /* ---------- HERO ---------- */
   header.hero{
@@ -185,6 +266,14 @@
   }
   .skill-tag::before{
     content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--cyan);
+  }
+  .skill-tag.sev-critical::before{ background:var(--amber); }
+  .skill-tag.sev-high::before{ background:#E0705C; }
+  .skill-tag.sev-medium::before{ background:var(--cyan); }
+  .skill-tag.sev-low::before{ background:#7FD98A; }
+  .skill-tag .sev-label{
+    font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);
+    display:block; margin-bottom:3px;
   }
 
   /* ---------- EXPERIENCE (incident log style) ---------- */
@@ -278,10 +367,28 @@
       <li><a href="#contact">Contact</a></li>
     </ul>
     <div class="nav-status"><span class="dot"></span>ONLINE</div>
+    <button class="nav-burger" id="navBurger" aria-label="Toggle menu"><span></span><span></span><span></span></button>
   </div>
 </nav>
+<div class="mobile-menu" id="mobileMenu">
+  <ul>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#skills">Skills</a></li>
+    <li><a href="#experience">Experience</a></li>
+    <li><a href="#education">Education</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</div>
+
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-track" id="tickerTrack"></div>
+</div>
+
+<div id="cursorGlow"></div>
 
 <header class="hero">
+  <div class="scanlines"></div>
+  <div class="scan-sweep"></div>
   <div class="wrap">
     <div class="eyebrow"><span class="line"></span>Kathmandu, Nepal &mdash; Network Security &amp; Infrastructure</div>
     <h1 class="name" id="heroName"></h1>
@@ -290,15 +397,15 @@
     <div class="hero-grid">
       <div class="summary-panel" id="summary">
         <div class="panel-label"><span>root@summary</span><span>~ #</span></div>
-        <p>5+ years securing banking-grade networks &mdash; firewalls, SIEM and endpoint protection.<br/>Specialized in infrastructure hardening, threat monitoring and incident response.</p>
+        <p id="summaryTyped"></p>
       </div>
       <svg class="net-graph" id="netGraph" viewBox="0 0 400 280" fill="none" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
 
     <div class="stat-row">
-      <div class="stat"><div class="num">5+</div><div class="lbl">Years in IT &amp; Security</div></div>
-      <div class="stat"><div class="num">100+</div><div class="lbl">Branches Secured</div></div>
-      <div class="stat"><div class="num">28%</div><div class="lbl">Faster Resolution Time</div></div>
+      <div class="stat"><div class="num"><span class="count-up" data-target="5" data-suffix="+">0</span></div><div class="lbl">Years in IT &amp; Security</div></div>
+      <div class="stat"><div class="num"><span class="count-up" data-target="50" data-suffix="+">0</span></div><div class="lbl">Branches Secured</div></div>
+      <div class="stat"><div class="num"><span class="count-up" data-target="28" data-suffix="%">0</span></div><div class="lbl">Faster Resolution Time</div></div>
     </div>
   </div>
 </header>
@@ -311,17 +418,17 @@
       <span class="sec-rule"></span>
     </div>
     <div class="skill-grid" id="skillGrid">
-      <div class="skill-tag">Network Architecture (LAN/WAN, VLANs, Routing)</div>
-      <div class="skill-tag">Firewall Management — FortiGate, Palo Alto</div>
-      <div class="skill-tag">VPN &amp; IPS/IDS</div>
-      <div class="skill-tag">SIEM &amp; Threat Monitoring — Log360, Logpoint</div>
-      <div class="skill-tag">Patch &amp; Endpoint Security</div>
-      <div class="skill-tag">Active Directory &amp; Windows Server</div>
-      <div class="skill-tag">Virtualization — VMware, Hyper-V</div>
-      <div class="skill-tag">Zabbix · MRTG · Cacti · SmokePing · CheckMK</div>
-      <div class="skill-tag">IT Automation</div>
-      <div class="skill-tag">Backup &amp; Disaster Recovery</div>
-      <div class="skill-tag">Incident Management &amp; RCA</div>
+      <div class="skill-tag sev-medium"><span class="sev-label">Core</span>Network Architecture (LAN/WAN, VLANs, Routing)</div>
+      <div class="skill-tag sev-critical"><span class="sev-label">Critical</span>Firewall Management — FortiGate, Palo Alto</div>
+      <div class="skill-tag sev-high"><span class="sev-label">High</span>VPN &amp; IPS/IDS</div>
+      <div class="skill-tag sev-critical"><span class="sev-label">Critical</span>SIEM &amp; Threat Monitoring — Log360, Logpoint</div>
+      <div class="skill-tag sev-high"><span class="sev-label">High</span>Patch &amp; Endpoint Security</div>
+      <div class="skill-tag sev-medium"><span class="sev-label">Core</span>Active Directory &amp; Windows Server</div>
+      <div class="skill-tag sev-medium"><span class="sev-label">Core</span>Virtualization — VMware, Hyper-V</div>
+      <div class="skill-tag sev-low"><span class="sev-label">Tooling</span>Zabbix · MRTG · Cacti · SmokePing · CheckMK</div>
+      <div class="skill-tag sev-low"><span class="sev-label">Tooling</span>IT Automation</div>
+      <div class="skill-tag sev-medium"><span class="sev-label">Core</span>Backup &amp; Disaster Recovery</div>
+      <div class="skill-tag sev-high"><span class="sev-label">High</span>Incident Management &amp; RCA</div>
     </div>
   </div>
 </section>
@@ -565,6 +672,84 @@ function playHeroIntro(fast){
   gsap.from('.role-line', { opacity:0, y:14, duration:.8, delay: fast ? .5 : 1.1 });
   gsap.from('.summary-panel', { opacity:0, y:20, duration:.9, delay: fast ? .6 : 1.3 });
   gsap.from('.stat', { opacity:0, y:14, duration:.7, delay: fast ? .8 : 1.6, stagger:.12 });
+
+  typeSummary(fast ? 700 : 1500);
+  gsap.delayedCall(fast ? 1.4 : 2.2, animateCounters);
+}
+
+/* ---------- Typed summary text ---------- */
+function typeSummary(delayMs){
+  const el = document.getElementById('summaryTyped');
+  const full = "5+ years securing banking-grade networks — firewalls, SIEM and endpoint protection. Specialized in infrastructure hardening, threat monitoring and incident response.";
+  let i = 0;
+  setTimeout(() => {
+    const iv = setInterval(() => {
+      el.textContent = full.slice(0, i) + (i < full.length ? '_' : '');
+      i++;
+      if (i > full.length) clearInterval(iv);
+    }, 14);
+  }, delayMs);
+}
+
+/* ---------- Animated stat counters ---------- */
+function animateCounters(){
+  document.querySelectorAll('.count-up').forEach(el => {
+    const target = parseFloat(el.dataset.target);
+    const suffix = el.dataset.suffix || '';
+    const obj = { val: 0 };
+    gsap.to(obj, {
+      val: target,
+      duration: 1.6,
+      ease: 'power2.out',
+      onUpdate: () => { el.textContent = Math.round(obj.val) + suffix; }
+    });
+  });
+}
+
+/* ---------- Mobile nav ---------- */
+const navBurger = document.getElementById('navBurger');
+const mobileMenu = document.getElementById('mobileMenu');
+if (navBurger) {
+  navBurger.addEventListener('click', () => {
+    navBurger.classList.toggle('open');
+    mobileMenu.classList.toggle('open');
+  });
+  mobileMenu.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => {
+      navBurger.classList.remove('open');
+      mobileMenu.classList.remove('open');
+    });
+  });
+}
+
+/* ---------- Cursor glow ---------- */
+const cursorGlow = document.getElementById('cursorGlow');
+if (cursorGlow && window.matchMedia('(hover: hover)').matches) {
+  window.addEventListener('mousemove', (e) => {
+    cursorGlow.style.opacity = '1';
+    gsap.to(cursorGlow, { x: e.clientX, y: e.clientY, duration: 0.5, ease: 'power2.out' });
+  });
+  window.addEventListener('mouseleave', () => { cursorGlow.style.opacity = '0'; });
+}
+
+/* ---------- Threat log ticker ---------- */
+const tickerLines = [
+  { lvl:'ok',   text:'Firewall ruleset synced — 0 conflicts' },
+  { lvl:'info', text:'SIEM correlation engine — nominal' },
+  { lvl:'warn', text:'Anomalous login pattern detected — mitigated' },
+  { lvl:'ok',   text:'Endpoint agents reporting — 100% coverage' },
+  { lvl:'info', text:'VPN gateway — 50+ branches connected' },
+  { lvl:'warn', text:'Patch window scheduled — 02:00 UTC' },
+  { lvl:'ok',   text:'Backup verification — passed' },
+  { lvl:'info', text:'IDS signature database — up to date' }
+];
+const tickerTrack = document.getElementById('tickerTrack');
+if (tickerTrack) {
+  const renderSet = () => tickerLines.map(l =>
+    `<span class="ticker-item"><span class="lvl lvl-${l.lvl}">${l.lvl.toUpperCase()}</span>${l.text}</span>`
+  ).join('');
+  // duplicate content for seamless loop
+  tickerTrack.innerHTML = renderSet() + renderSet();
 }
 
 if (shouldShowLoader()) {
